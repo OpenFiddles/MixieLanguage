@@ -85,7 +85,7 @@ fn install_packages(env_info: &Environment) -> Result<(), String> {
     let (program, args): (&str, Vec<&str>) = match manager {
         "pkg" => ("pkg", vec!["install", "-y"]),
         "apt-get" => {
-            if unsafe { libc_geteuid() } != 0 && command_exists("sudo") {
+            if !is_root() && command_exists("sudo") {
                 ("sudo", vec!["apt-get", "update"])
             } else { ("apt-get", vec!["update"]) }
         }
@@ -101,7 +101,7 @@ fn install_packages(env_info: &Environment) -> Result<(), String> {
         if !status.success() { return Err("Package index update failed.".into()); }
         let mut install_args = vec!["install", "-y"];
         install_args.extend(env_info.packages.iter().copied());
-        let (program, args) = if unsafe { libc_geteuid() } != 0 && command_exists("sudo") {
+        let (program, args) = if !is_root() && command_exists("sudo") {
             ("sudo", [vec!["apt-get"], install_args].concat())
         } else { ("apt-get", install_args) };
         let status = Command::new(program).args(args).status().map_err(|e| e.to_string())?;
@@ -109,19 +109,22 @@ fn install_packages(env_info: &Environment) -> Result<(), String> {
     }
     let mut full_args = args;
     full_args.extend(env_info.packages.iter().copied());
+    let (program, full_args) = if !matches!(manager, "pkg" | "brew") && !is_root() && command_exists("sudo") {
+        ("sudo", [vec![program], full_args].concat())
+    } else { (program, full_args) };
     let status = Command::new(program).args(full_args).status().map_err(|e| e.to_string())?;
     if status.success() { Ok(()) } else { Err("Package installation failed.".into()) }
 }
 
-// libc is deliberately not a dependency; use the standard id command on Unix.
+// Detect root without adding a libc dependency.
 #[cfg(unix)]
-unsafe fn libc_geteuid() -> u32 {
+fn is_root() -> bool {
     Command::new("id").arg("-u").output().ok()
         .and_then(|o| String::from_utf8(o.stdout).ok())
-        .and_then(|s| s.trim().parse().ok()).unwrap_or(1)
+        .is_some_and(|s| s.trim() == "0")
 }
 #[cfg(not(unix))]
-unsafe fn libc_geteuid() -> u32 { 1 }
+fn is_root() -> bool { false }
 
 fn build_project() -> Result<(), String> {
     let status = Command::new("cargo").args(["build", "--release"]).status()

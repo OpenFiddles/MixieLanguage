@@ -4,6 +4,7 @@ pub mod image;
 pub mod interpreter;
 pub mod lexer;
 pub mod parser;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod setup;
 pub mod syntax;
 use wasm_bindgen::prelude::*;
