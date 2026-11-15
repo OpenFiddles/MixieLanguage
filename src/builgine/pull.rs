@@ -1,5 +1,7 @@
 use crate::ast::PullSpec;
+#[cfg(not(target_arch = "wasm32"))]
 use sha2::{Digest, Sha256};
+#[cfg(not(target_arch = "wasm32"))]
 use std::{fs::{self, OpenOptions}, io::{Read, Write}, path::{Path, PathBuf}, process::Command};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,6 +48,7 @@ pub fn describe_pull(s: &PullSpec) -> Result<String, String> {
 }
 
 /// Clones source with Git, or streams an HTTPS binary and verifies SHA-256 before accepting it.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn execute_pull(plan: &PullPlan, destination: impl AsRef<Path>) -> Result<PathBuf,String> {
     let destination=destination.as_ref();
     if destination.exists() {
@@ -103,6 +106,7 @@ pub fn execute_pull(plan: &PullPlan, destination: impl AsRef<Path>) -> Result<Pa
 }
 
 /// Runs only the fixed Make backend after explicit confirmation that the source is trusted.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn build_source(plan:&PullPlan,source_dir:impl AsRef<Path>,confirm_trusted_source:bool)->Result<(),String>{
     if !confirm_trusted_source{return Err("build cancelled: explicitly confirm that the source tree is trusted".into());}
     if plan.kind!="source"||plan.build_system.as_deref()!=Some("make"){
