@@ -1,0 +1,39 @@
+name: MixieLand WebAssembly + GitHub Pages
+on:
+  push:
+    branches: [rust-rewrite]
+    paths: ["src/**","Cargo.toml","Cargo.lock","web/**",".github/workflows/pages.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install wasm-bindgen CLI
+        run: cargo install wasm-bindgen-cli --locked
+      - name: Build WebAssembly package
+        run: |
+          cargo build --release --lib --target wasm32-unknown-unknown
+          wasm-bindgen --target web --out-dir web/pkg target/wasm32-unknown-unknown/release/mixieland.wasm
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-wasm
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

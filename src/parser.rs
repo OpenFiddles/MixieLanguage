@@ -1,31 +1,9 @@
-use crate::{
-    ast::{Program, Statement},
-    lexer::{Kind, Token},
-};
-
-pub fn parse(tokens: Vec<Token>) -> Result<Program, String> {
-    let mut p = Program::default();
-    let mut i = 0;
-    while i < tokens.len() {
-        let t = &tokens[i];
-        let (word, line, col) = match &t.kind {
-            Kind::Ident(w) => (w.as_str(), t.line, t.col),
-            _ => return Err(format!("expected statement at {}:{}", t.line, t.col)),
-        };
-        if word != "print" {
-            return Err(format!("unknown statement '{word}' at {line}:{col}"));
-        }
-        i += 1;
-        let value = match tokens.get(i).map(|t| &t.kind) {
-            Some(Kind::String(s)) => s.clone(),
-            _ => return Err(format!("print expects a quoted string at {line}:{col}")),
-        };
-        i += 1;
-        if !matches!(tokens.get(i).map(|t| &t.kind), Some(Kind::Semi)) {
-            return Err(format!("expected ';' after print at {line}:{col}"));
-        }
-        i += 1;
-        p.statements.push(Statement::Print(value));
-    }
-    Ok(p)
-}
+use crate::{ast::{Program,PullSpec,Statement},lexer::{Kind,Token}};
+pub fn parse(tokens:Vec<Token>)->Result<Program,String>{let mut p=Program::default();let mut i=0;while i<tokens.len(){let(word,line,col)=match &tokens[i].kind{Kind::Ident(w)=>(w.as_str(),tokens[i].line,tokens[i].col),_=>return Err(format!("expected statement at {}:{}",tokens[i].line,tokens[i].col))};i+=1;match word{
+"print"=>{let v=match tokens.get(i).map(|t|&t.kind){Some(Kind::String(s))=>s.clone(),_=>return Err(format!("print expects a quoted string at {line}:{col}"))};i+=1;if !matches!(tokens.get(i).map(|t|&t.kind),Some(Kind::Semi)){return Err(format!("expected ';' after print at {line}:{col}"))}i+=1;p.statements.push(Statement::Print(v))}
+"pull"=>{expect(&tokens,&mut i,|k|matches!(k,Kind::LeftBrace),"expected '{' after pull")?;let name=ident(&tokens,&mut i,"expected resource name")?;let mut s=PullSpec{name,..Default::default()};while !matches!(tokens.get(i).map(|t|&t.kind),Some(Kind::RightBrace)){expect(&tokens,&mut i,|k|matches!(k,Kind::Comma),"expected ',' between pull fields")?;let key=ident(&tokens,&mut i,"expected pull field")?;expect(&tokens,&mut i,|k|matches!(k,Kind::Equals),"expected '=' after pull field")?;let v=string(&tokens,&mut i,"pull values must be quoted strings")?;let slot=match key.as_str(){"source"=>&mut s.source,"binary"=>&mut s.binary,"revision"=>&mut s.revision,"checksum"=>&mut s.checksum,"build"=>&mut s.build,_=>return Err(format!("unknown pull field '{key}'"))};if slot.replace(v).is_some(){return Err(format!("duplicate pull field '{key}'"))}}
+i+=1;if s.source.is_some()==s.binary.is_some(){return Err("pull requires exactly one of source or binary".into())}if s.binary.is_some()&&s.checksum.is_none(){return Err("prebuilt binary pulls require a SHA256 checksum".into())}if s.build.as_deref().is_some_and(|v|v!="make"){return Err("initial source builder recognizes build = \"make\" only".into())}p.statements.push(Statement::Pull(s))}
+x=>return Err(format!("unknown statement '{x}' at {line}:{col}"))}}Ok(p)}
+fn expect<F:Fn(&Kind)->bool>(t:&[Token],i:&mut usize,f:F,msg:&str)->Result<(),String>{if t.get(*i).is_some_and(|v|f(&v.kind)){*i+=1;Ok(())}else{Err(msg.into())}}
+fn ident(t:&[Token],i:&mut usize,msg:&str)->Result<String,String>{match t.get(*i).map(|v|&v.kind){Some(Kind::Ident(s))=>{*i+=1;Ok(s.clone())},_=>Err(msg.into())}}
+fn string(t:&[Token],i:&mut usize,msg:&str)->Result<String,String>{match t.get(*i).map(|v|&v.kind){Some(Kind::String(s))=>{*i+=1;Ok(s.clone())},_=>Err(msg.into())}}
