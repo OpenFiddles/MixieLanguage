@@ -1,12 +1,16 @@
 # Builgine
 
-Builgine is the build orchestration and artifact-management subsystem planned for MixieLand.
+Builgine is the build and resource orchestration subsystem of MixieLand.
 
-Initial responsibilities:
-- Resolve and validate MixieLang pull declarations.
-- Distinguish source repositories from prebuilt binary artifacts.
-- Require SHA-256 checksums for prebuilt downloads.
-- Record source revisions and requested build systems.
-- Later fetch pinned source, stage artifacts, invoke supported build backends, and package outputs.
+## Pull backend
 
-Current status: the Rust code provides a validated pull-plan API only. It does not yet execute remote build scripts or install binaries. Those operations need explicit trust, sandboxing, platform-compatibility, and artifact-verification controls. The first planned backend is Linux kernel source via Make, plus verified prebuilt kernel images.
+MixieLang parses resource declarations for Git source or prebuilt artifacts. Binary pulls require a SHA-256 digest.
+
+The Rust API exposes:
+- validate_pull(&PullSpec) — validates the declaration.
+- execute_pull(&PullPlan, destination) — clones Git source or streams an HTTPS binary to disk and verifies SHA-256 before accepting it.
+- build_source(&PullPlan, source_dir, confirm_trusted_source) — invokes the fixed make backend only after explicit trust confirmation.
+
+Source retrieval requires Git. Building requires Make and the source tree's build dependencies. A Makefile is executable code; only build source you trust. The interpreter does not run builds automatically when it reads a pull statement. Binary artifacts are not executed by the pull backend.
+
+The Linux kernel workflow is a retrieval/build foundation, not a turnkey kernel configuration. A real kernel build still needs an architecture, kernel configuration, toolchain, host dependencies, and a deliberate output/install target.

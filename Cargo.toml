@@ -4,10 +4,15 @@ version = "0.1.0"
 edition = "2021"
 description = "The Rust implementation of the MixieLand toolchain"
 license = "GPL-3.0-only"
+
 [lib]
 crate-type = ["rlib", "cdylib"]
+
 [[bin]]
 name = "mixie"
 path = "src/main.rs"
+
 [dependencies]
 wasm-bindgen = "0.2"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+sha2 = "0.10"
