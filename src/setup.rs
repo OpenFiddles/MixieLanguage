@@ -1,7 +1,6 @@
 use std::{
     env,
     io::{self, Write},
-    path::Path,
     process::{Command, Stdio},
 };
 
