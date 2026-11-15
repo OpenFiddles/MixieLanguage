@@ -53,6 +53,12 @@ pub fn execute_pull(plan: &PullPlan, destination: impl AsRef<Path>) -> Result<Pa
             return Err(format!("destination must be a new or empty directory: {}",destination.display()));
         }
     } else { fs::create_dir_all(destination).map_err(|e|format!("cannot create destination: {e}"))?; }
+    if plan.kind == "binary" {
+        let name = Path::new(&plan.resource);
+        if name.components().count() != 1 || !matches!(name.components().next(), Some(std::path::Component::Normal(_))) {
+            return Err("binary resource name must be a single safe filename".into());
+        }
+    }
     match plan.kind {
         "source" => {
             let status=Command::new("git").arg("clone").arg("--filter=blob:none").arg("--no-checkout")
@@ -61,7 +67,7 @@ pub fn execute_pull(plan: &PullPlan, destination: impl AsRef<Path>) -> Result<Pa
             if !status.success(){return Err(format!("git clone failed with status {status}"));}
             let revision=plan.revision.as_deref().unwrap_or("HEAD");
             let status=Command::new("git").arg("-C").arg(destination).arg("checkout")
-                .arg("--detach").arg("--").arg(revision).status()
+                .arg("--detach").arg(revision).status()
                 .map_err(|e|format!("could not run git checkout: {e}"))?;
             if !status.success(){return Err(format!("git checkout failed with status {status}"));}
         }
