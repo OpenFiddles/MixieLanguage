@@ -2,41 +2,34 @@
 
 **MixieLang — simple, yet so elegant in power.**
 
-MixieLand is the development suite. MixieLang is its programming language, and Builgine will become its build orchestration system.
+MixieLand is the development suite. MixieLang is its programming language, and Builgine is the build and resource orchestration subsystem.
 
-## Rust rewrite
+## Quick setup
 
-The active implementation is being rewritten in Rust. The legacy C/Flex/Bison interpreter is being retired rather than kept as a runtime dependency.
+Build the CLI, then launch the interactive setup menu:
 
-### Requirements
+```sh
+cargo build --release
+./target/release/mixie setup
+```
+
+The setup menu uses the standard `dialog` terminal utility when installed. It offers dependency checks, optional prerequisite installation, a release build, and a hello-world test. On Termux, install the menu utility first with `pkg install dialog`. If `dialog` is unavailable, MixieLang prints the platform-specific install hint and provides a basic text fallback.
+
+Detected environments currently include Termux, Debian/Ubuntu, Fedora, Arch, Alpine, openSUSE, and macOS with Homebrew. Package installation is only started after you select it in the menu and confirm. Windows and unknown environments show manual setup guidance.
+
+## Requirements
+
 - Rust stable toolchain (Cargo included)
+- Git for source pulls
+- Make for source builds
+- `dialog` for the full terminal setup interface
 
-### Build and run
+## Build and run
+
 ```sh
 cargo build --release
 cargo run --release -- -f examples/hello.mx
+cargo run --release -- setup
 ```
 
-Or run source from standard input:
-```sh
-printf 'print "Hello, World!";\n' | cargo run --quiet
-```
-
-### Current implementation
-- Rust CLI, lexer, parser, AST, and interpreter modules
-- Quoted strings and MixieLang line, block, and metadata comments
-- Existing `print "..." ;` prototype compatibility
-- Initial `.mxpg` container boundary validation
-- Automated integration tests
-
-The canonical grammar, Beg/Adv/AdvN modes, package/import handling, shared IR, and CIDDAT toolchain are next migration stages.
-
-## Layout
-- `src/` — Rust implementation
-- `tests/` — integration tests
-- `examples/` — sample programs
-- `playground/` — browser playground (Rust/WASM port follows after core stabilization)
-- `docs/` — architecture and language specifications
-
-## License
-GPL-3.0-only.
+The setup menu does not run automatically, change shell startup files, or install packages without confirmation.

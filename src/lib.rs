@@ -4,6 +4,7 @@ pub mod image;
 pub mod interpreter;
 pub mod lexer;
 pub mod parser;
+pub mod setup;
 pub mod syntax;
 use wasm_bindgen::prelude::*;
 pub fn run(source: &str) -> Result<String, String> {
