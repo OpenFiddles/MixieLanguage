@@ -1,9 +1,11 @@
 pub mod ast;
 pub mod builgine;
+pub mod compiler;
 pub mod image;
 pub mod interpreter;
 pub mod lexer;
 pub mod parser;
+pub mod repl;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod setup;
 pub mod syntax;
