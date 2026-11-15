@@ -20,8 +20,8 @@ pub fn evaluate(expr:&Expr,env:&Environment)->Result<Value,String>{
         Expr::Binary{left,op,right}=>{
             let a=evaluate(left,env)?;let b=evaluate(right,env)?;
             match (a,b) {
-                (Value::Number(x),Value::Number(y))=>match op {'+'=>Ok(Value::Number(x+y)),'-'=>Ok(Value::Number(x-y)),'*'=>Ok(Value::Number(x*y)),'/'=>if y==0.0{Err("division by zero".into())}else{Ok(Value::Number(x/y))},_=>Err(format!("unsupported operator '{op}'"))},
-                (Value::String(x),Value::String(y)) if *op=='+'=>Ok(Value::String(x+&y)),
+                (Value::Number(x),Value::Number(y))=>match *op {'+'=>Ok(Value::Number(x+y)),'-'=>Ok(Value::Number(x-y)),'*'=>Ok(Value::Number(x*y)),'/'=>if y==0.0{Err("division by zero".into())}else{Ok(Value::Number(x/y))},_=>Err(format!("unsupported operator '{op}'"))},
+                (Value::String(x),Value::String(y)) if *op=='+' =>Ok(Value::String(x+&y)),
                 _=>Err("operator requires two numbers (or two strings with '+')".into())
             }
         }

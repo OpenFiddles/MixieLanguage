@@ -4,8 +4,23 @@
 - **MixieLang** is the programming language and its language tooling.
 - **Builgine** is the build orchestration, target configuration, external compiler integration, and packaging system.
 
-The intended pipeline is `Source → Lexer → Parser → AST → Semantic Analysis → Shared IR → Backends`. The interpreter executes the shared IR; compiler, decompiler, assembler, disassembler, and translator components will consume or produce explicit representations around it.
+The intended pipeline is `Source → Lexer → Parser → AST → Semantic Analysis → Shared IR → Backends`. The interpreter executes the AST today; the native compiler currently lowers the supported numeric subset to C and invokes the host C toolchain.
 
-The first Rust milestone separates the lexer, parser, AST, interpreter, CLI, and .mxpg validation into modules. These will grow into workspace crates as their interfaces stabilize. GCC, NASM, and other specialized tools remain optional Builgine backends.
+## Current language slice
 
-Beg, Adv, and AdvN are modes of one language, not separate languages. The existing print prototype is retained as a migration smoke test while the newer syntax becomes the canonical grammar.
+- Numeric and string literals.
+- Variables with `let name = expression;`.
+- Arithmetic: `+`, `-`, `*`, `/`, and unary minus.
+- Parenthesized expressions and normal arithmetic precedence.
+- `print expression;` including string concatenation.
+- Existing `pull { ... }` Builgine directives.
+
+The REPL retains an environment between statements. File execution starts with a fresh environment.
+
+## Compiler targets
+
+The first compiler target is a native host executable. It requires Clang or GCC and produces a binary for the current operating system and CPU architecture.
+
+A bare-metal target is deliberately separate. It needs a freestanding runtime, architecture-specific entry point, memory layout, linker script, boot protocol, and image packaging. Builgine will own those target profiles and boot-image generation rather than pretending a normal host executable is bootable.
+
+Beg, Adv, and AdvN are modes of one language, not separate languages. The existing print prototype is retained as a migration smoke test while the newer syntax becomes canonical.
