@@ -27,7 +27,7 @@ menu() {
       launch "Open MixieLang setup menu" \
       quit "Exit" 3>&1 1>&2 2>&3
   else
-    printf '\nMixieLand setup\n1) Install prerequisites\n2) Build MixieLang\n3) Run tests\n4) Open setup menu\n0) Exit\nChoose: '
+    printf '\nMixieLand setup\n1) Install prerequisites\n2) Build MixieLang\n3) Run tests\n4) Open setup menu\n0) Exit\nChoose: ' >&2
     read -r n
     case "$n" in 1) echo install;; 2) echo build;; 3) echo test;; 4) echo launch;; *) echo quit;; esac
   fi
