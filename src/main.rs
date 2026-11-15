@@ -4,7 +4,11 @@ mod interpreter;
 mod lexer;
 mod parser;
 
-use std::{env, fs, io::{self, Read}, process::ExitCode};
+use std::{
+    env, fs,
+    io::{self, Read},
+    process::ExitCode,
+};
 
 fn run() -> Result<(), String> {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -18,10 +22,15 @@ fn run() -> Result<(), String> {
     }
     let (source, filename) = if args.len() == 2 && args[0] == "-f" {
         let p = &args[1];
-        (fs::read_to_string(p).map_err(|e| format!("cannot read {p}: {e}"))?, Some(p.clone()))
+        (
+            fs::read_to_string(p).map_err(|e| format!("cannot read {p}: {e}"))?,
+            Some(p.clone()),
+        )
     } else if args.is_empty() {
         let mut s = String::new();
-        io::stdin().read_to_string(&mut s).map_err(|e| format!("stdin: {e}"))?;
+        io::stdin()
+            .read_to_string(&mut s)
+            .map_err(|e| format!("stdin: {e}"))?;
         (s, None)
     } else {
         return Err("usage: mixie -f <file.mx> (or pipe source to stdin)".into());
@@ -36,9 +45,13 @@ fn run() -> Result<(), String> {
     }
     Ok(())
 }
+
 fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
-        Err(e) => { eprintln!("MixieLang error: {e}"); ExitCode::FAILURE }
+        Err(e) => {
+            eprintln!("MixieLang error: {e}");
+            ExitCode::FAILURE
+        }
     }
 }
