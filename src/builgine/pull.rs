@@ -77,27 +77,43 @@ pub fn execute_pull(plan: &PullPlan, destination: impl AsRef<Path>) -> Result<Pa
         "binary" => {
             let expected=plan.checksum.as_deref().ok_or("binary pull has no checksum")?;
             let expected=expected.strip_prefix("SHA256:").unwrap_or(expected).to_ascii_lowercase();
+            const MAX_DOWNLOAD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
             let file_path=destination.join(&plan.resource);
-            let response=reqwest::blocking::Client::builder().https_only(true).build()
-                .map_err(|e|format!("HTTP client error: {e}"))?.get(&plan.url).send()
-                .map_err(|e|format!("download failed: {e}"))?.error_for_status()
-                .map_err(|e|format!("download returned an error: {e}"))?;
-            let mut response=response;
-            let mut file=OpenOptions::new().write(true).create_new(true).open(&file_path)
-                .map_err(|e|format!("cannot create downloaded file: {e}"))?;
-            let mut hasher=Sha256::new(); let mut buffer=[0u8;65536];
-            loop {
-                let n=response.read(&mut buffer).map_err(|e|format!("download read failed: {e}"))?;
-                if n==0 {break;}
-                hasher.update(&buffer[..n]);
-                file.write_all(&buffer[..n]).map_err(|e|format!("file write failed: {e}"))?;
-            }
-            file.flush().map_err(|e|format!("file flush failed: {e}"))?;
-            let actual=format!("{:x}",hasher.finalize());
-            if actual!=expected {
-                drop(file); let _=fs::remove_file(&file_path);
-                return Err(format!("SHA256 mismatch: expected {expected}, received {actual}"));
-            }
+            if file_path.exists() { return Err(format!("artifact already exists: {}",file_path.display())); }
+            let temp_path=destination.join(format!(".{}.part",plan.resource));
+            let result=(|| -> Result<(),String> {
+                let client=reqwest::blocking::Client::builder().https_only(true)
+                    .connect_timeout(std::time::Duration::from_secs(30))
+                    .timeout(std::time::Duration::from_secs(300)).build()
+                    .map_err(|e|format!("HTTP client error: {e}"))?;
+                let mut response=client.get(&plan.url).send()
+                    .map_err(|e|format!("download failed: {e}"))?.error_for_status()
+                    .map_err(|e|format!("download returned an error: {e}"))?;
+                if response.content_length().is_some_and(|n|n>MAX_DOWNLOAD_BYTES) {
+                    return Err("download exceeds the 2 GiB safety limit".into());
+                }
+                let mut file=OpenOptions::new().write(true).create_new(true).open(&temp_path)
+                    .map_err(|e|format!("cannot create temporary download: {e}"))?;
+                let mut hasher=Sha256::new(); let mut buffer=[0u8;65536]; let mut total=0u64;
+                loop {
+                    let n=response.read(&mut buffer).map_err(|e|format!("download read failed: {e}"))?;
+                    if n==0 {break;}
+                    total=total.saturating_add(n as u64);
+                    if total>MAX_DOWNLOAD_BYTES { return Err("download exceeds the 2 GiB safety limit".into()); }
+                    hasher.update(&buffer[..n]);
+                    file.write_all(&buffer[..n]).map_err(|e|format!("file write failed: {e}"))?;
+                }
+                file.flush().map_err(|e|format!("file flush failed: {e}"))?;
+                file.sync_all().map_err(|e|format!("file sync failed: {e}"))?;
+                let actual=format!("{:x}",hasher.finalize());
+                if actual!=expected { return Err(format!("SHA256 mismatch: expected {expected}, received {actual}")); }
+                drop(file);
+                fs::hard_link(&temp_path,&file_path)
+                    .map_err(|e|format!("cannot publish verified artifact: {e}"))?;
+                Ok(())
+            })();
+            let _=fs::remove_file(&temp_path);
+            result?;
             return Ok(file_path);
         }
         _=>return Err("unknown pull kind".into()),
